@@ -197,7 +197,7 @@ const randomRotation = () => (Math.random() - 0.5) * 10
 
 function App() {
   const [items, setItems] = useState<BoardItem[]>([])
-  const [activeTool, setActiveTool] = useState<Tool>('note')
+  const [_activeTool, setActiveTool] = useState<Tool>('note')
   const [isReadonly, setIsReadonly] = useState(false)
   const [showToast, setShowToast] = useState<string | null>(null)
   const [showDoodleModal, setShowDoodleModal] = useState(false)
@@ -223,11 +223,11 @@ function App() {
   const [showPhotoModal, setShowPhotoModal] = useState(false)
   const [draggingItemId, setDraggingItemId] = useState<string | null>(null)
   const [binProximity, setBinProximity] = useState(0)
-  const [draggingOverBin, setDraggingOverBin] = useState(false)
+  const [_draggingOverBin, setDraggingOverBin] = useState(false)
   const [lidOpen, setLidOpen] = useState(false)
   const [dragScaleVal, setDragScaleVal] = useState(1)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
-  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null)
+  const [_hoveredCardId, setHoveredCardId] = useState<string | null>(null)
   const [toolbarCollapsed, setToolbarCollapsed] = useState(false)
   const hoverLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const binRef = useRef<HTMLDivElement>(null)
@@ -373,7 +373,7 @@ function App() {
     dragMoveCleanup.current = null
   }
 
-  const serializeBoard = (sourceItems: BoardItem[]) => {
+  const _serializeBoard = (sourceItems: BoardItem[]) => {
     const payload: SerializedBoard = { items: sourceItems }
     return compressToEncodedURIComponent(JSON.stringify(payload))
   }
@@ -475,7 +475,7 @@ function App() {
     setItems((prev) => [...prev, note])
   }
 
-  const addText = () => {
+  const _addText = () => {
     const centerX = 220 + Math.random() * 120
     const centerY = 160 + Math.random() * 120
     const id = crypto.randomUUID()
@@ -908,7 +908,7 @@ function App() {
     }
   }
 
-  const toolbarDisabled = isReadonly
+  const _toolbarDisabled = isReadonly
 
   if (isReadonly) {
     return (
@@ -2435,7 +2435,7 @@ function StickerModal({ onClose, onSelect }: { onClose: () => void; onSelect: (s
   const [activeCategory, setActiveCategory] = useState(0)
   const [search, setSearch] = useState('')
 
-  const visibleEmojis = search.trim()
+  const _visibleEmojis = search.trim()
     ? STICKER_CATEGORIES.flatMap(c => c.emojis).filter(e =>
         STICKER_CATEGORIES.some(c => c.emojis.includes(e) && c.label.toLowerCase().includes(search.toLowerCase()))
         || e === search
@@ -2872,7 +2872,7 @@ function DoodleModal({ onClose, onSave }: DoodleModalProps) {
 }
 
 
-function SpotifyCard({ item, isDragging, isReadonly, isPlaying, onDelete, onStyleChange, onPlay }: {
+function SpotifyCard({ item, isDragging, isReadonly, isPlaying, onDelete: _onDelete, onStyleChange, onPlay }: {
   item: SpotifyItem
   isDragging: boolean
   isReadonly: boolean
