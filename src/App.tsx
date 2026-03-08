@@ -225,7 +225,8 @@ function App() {
   const [showGifModal, setShowGifModal] = useState(false)
   const [showStickerModal, setShowStickerModal] = useState(false)
   const [showIllustrationsModal, setShowIllustrationsModal] = useState(false)
-  const [isSharing, setIsSharing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [shareUrl, setShareUrl] = useState<string | null>(null)
   const [showCountdownModal, setShowCountdownModal] = useState(false)
   const [showLocationPicker, setShowLocationPicker] = useState(false)
   const [locationQuery, setLocationQuery] = useState('')
@@ -316,56 +317,6 @@ function App() {
     }).catch(() => { boardLoaded.current = true })
   }, [])
 
-  const itemsRef = useRef(items)
-  useEffect(() => { itemsRef.current = items }, [items])
-
-  const persistBoard = async (boardItems: BoardItem[]) => {
-    if (!boardLoaded.current) return
-    const compressItem = (item: BoardItem): Promise<BoardItem> => {
-      if (item.type !== 'photo') return Promise.resolve(item)
-      if (!item.src.startsWith('data:')) return Promise.resolve(item)
-      return new Promise((resolve) => {
-        const img = new Image()
-        img.onload = () => {
-          try {
-            const MAX = 800
-            const scale = Math.min(1, MAX / Math.max(img.width, img.height))
-            const canvas = document.createElement('canvas')
-            canvas.width = Math.round(img.width * scale)
-            canvas.height = Math.round(img.height * scale)
-            canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
-            resolve({ ...item, src: canvas.toDataURL('image/jpeg', 0.6) })
-          } catch { resolve(item) }
-        }
-        img.onerror = () => resolve(item)
-        img.src = item.src
-      })
-    }
-    const compressed = await Promise.all(boardItems.map(compressItem))
-    saveBoard(getOrCreateBoardId(), compressed).catch(() => {})
-  }
-
-  // Save when user switches tab or minimizes window
-  useEffect(() => {
-    if (isReadonly) return
-    const handleVisibility = () => {
-      if (document.visibilityState === 'hidden') {
-        persistBoard(itemsRef.current)
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibility)
-    return () => document.removeEventListener('visibilitychange', handleVisibility)
-  }, [isReadonly])
-
-  // Fallback: debounced save every 30s
-  useEffect(() => {
-    if (isReadonly) return
-    if (!boardLoaded.current) return
-    const timer = setTimeout(() => {
-      persistBoard(itemsRef.current)
-    }, 30000)
-    return () => clearTimeout(timer)
-  }, [items, isReadonly])
 
   useEffect(() => {
     const container = document.createElement('div')
@@ -456,17 +407,14 @@ function App() {
     }, 2200)
   }
 
-  const handleShare = async () => {
+  const handleSave = async () => {
     if (!items.length) {
       showTempToast('Add a few memories first.')
       return
     }
-    if (isSharing) return
-    setIsSharing(true)
+    if (isSaving) return
+    setIsSaving(true)
 
-    showTempToast('Generating link…')
-
-    // Compress local photos before sharing
     const compressItem = (item: BoardItem): Promise<BoardItem> => {
       if (item.type !== 'photo') return Promise.resolve(item)
       if (!item.src.startsWith('data:')) return Promise.resolve(item)
@@ -481,9 +429,7 @@ function App() {
             canvas.height = Math.round(img.height * scale)
             canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
             resolve({ ...item, src: canvas.toDataURL('image/jpeg', 0.35) })
-          } catch {
-            resolve(item)
-          }
+          } catch { resolve(item) }
         }
         img.onerror = () => resolve(item)
         img.src = item.src
@@ -497,41 +443,27 @@ function App() {
           .map(compressItem)
       )
 
-      // Save snapshot to Supabase with a new share UUID
-      const shareId = crypto.randomUUID()
-      const saved = await saveBoard(shareId, compressedItems)
+      const boardId = crypto.randomUUID()
+      const saved = await saveBoard(boardId, compressedItems)
 
-      let shareUrl: string
+      let url: string
       if (saved) {
-        shareUrl = `${window.location.origin}${window.location.pathname}?board=${shareId}`
+        url = `${window.location.origin}${window.location.pathname}?board=${boardId}`
       } else {
-        // Fallback: encode into URL hash, then shorten via TinyURL
         const compressed = compressToEncodedURIComponent(JSON.stringify({ items: compressedItems }))
         const longUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
         try {
           const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`)
-          if (res.ok) {
-            shareUrl = await res.text()
-          } else {
-            shareUrl = longUrl
-          }
-        } catch {
-          shareUrl = longUrl
-        }
+          url = res.ok ? await res.text() : longUrl
+        } catch { url = longUrl }
       }
 
-      try {
-        await navigator.clipboard.writeText(shareUrl)
-        showTempToast('Share link copied!')
-      } catch {
-        window.prompt('Copy this link to share your board:', shareUrl)
-        showTempToast('Share link copied!')
-      }
+      setShareUrl(url)
     } catch (err) {
-      console.error('Share failed:', err)
-      showTempToast('Could not generate link. Try again.')
+      console.error('Save failed:', err)
+      showTempToast('Could not save board. Try again.')
     } finally {
-      setIsSharing(false)
+      setIsSaving(false)
     }
   }
 
@@ -1027,22 +959,18 @@ function App() {
           {!isReadonly && (
             <button
               type="button"
-              className={`app-share-button icon-only${isSharing ? ' sharing' : ''}`}
-              onClick={handleShare}
-              aria-label="Share board"
-              disabled={isSharing}
+              className={`app-share-button${isSaving ? ' sharing' : ''}`}
+              onClick={handleSave}
+              disabled={isSaving}
             >
-              {isSharing ? (
-                <svg className="share-spinner" viewBox="0 0 24 24" width="18" height="18" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="40" strokeDashoffset="20" />
-                </svg>
-              ) : (
-                <img
-                  className="app-share-icon"
-                  src="https://api.iconify.design/material-symbols:share.svg?color=white"
-                  alt=""
-                />
-              )}
+              {isSaving ? (
+                <>
+                  <svg className="share-spinner" viewBox="0 0 24 24" width="14" height="14" fill="none">
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="40" strokeDashoffset="20" />
+                  </svg>
+                  Saving…
+                </>
+              ) : 'Save & Share'}
             </button>
           )}
           <button
@@ -1734,6 +1662,29 @@ function App() {
       </main>
 
       {showToast && <div className="toast">{showToast}</div>}
+
+      {shareUrl && (
+        <div className="save-modal-overlay" onClick={() => setShareUrl(null)}>
+          <div className="save-modal" onClick={e => e.stopPropagation()}>
+            <button className="save-modal-close" onClick={() => setShareUrl(null)}>✕</button>
+            <div className="save-modal-emoji">🎉</div>
+            <h2 className="save-modal-title">Your board is saved!</h2>
+            <p className="save-modal-desc">Share it with friends using the link below.</p>
+            <div className="save-modal-url-row">
+              <span className="save-modal-url">{shareUrl}</span>
+              <button
+                className="save-modal-copy"
+                onClick={() => {
+                  navigator.clipboard.writeText(shareUrl).catch(() => {})
+                  showTempToast('Link copied!')
+                }}
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
 
       {showGifModal && !isReadonly && (
