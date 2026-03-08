@@ -454,11 +454,14 @@ function App() {
         longUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
       }
 
-      // Always shorten via TinyURL
+      // Always shorten via is.gd (supports CORS)
       let url = longUrl
       try {
-        const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`)
-        if (res.ok) url = (await res.text()).trim()
+        const res = await fetch(`https://is.gd/create.php?format=simple&url=${encodeURIComponent(longUrl)}`)
+        if (res.ok) {
+          const short = (await res.text()).trim()
+          if (short.startsWith('http')) url = short
+        }
       } catch { /* use longUrl as fallback */ }
 
       setShareUrl(url)
