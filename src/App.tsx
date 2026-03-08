@@ -957,29 +957,31 @@ function App() {
         <div className="app-header-actions">
           {isReadonly && <span className="pill">Viewing shared board</span>}
           {!isReadonly && (
-            <button
-              type="button"
-              className={`app-share-button${isSaving ? ' sharing' : ''}`}
-              onClick={handleSave}
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <>
-                  <svg className="share-spinner" viewBox="0 0 24 24" width="14" height="14" fill="none">
-                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="40" strokeDashoffset="20" />
-                  </svg>
-                  Saving…
-                </>
-              ) : 'Save & Share'}
-            </button>
+            <>
+              <button
+                type="button"
+                className="btn-ghost"
+                onClick={handleNewBoard}
+              >
+                Start Fresh
+              </button>
+              <button
+                type="button"
+                className={`btn-primary${isSaving ? ' saving' : ''}`}
+                onClick={handleSave}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <>
+                    <svg className="share-spinner" viewBox="0 0 24 24" width="14" height="14" fill="none">
+                      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="40" strokeDashoffset="20" />
+                    </svg>
+                    Saving…
+                  </>
+                ) : 'Save & Share'}
+              </button>
+            </>
           )}
-          <button
-            type="button"
-            className="app-share-button"
-            onClick={handleNewBoard}
-          >
-            New Board
-          </button>
         </div>
       </header>
 
