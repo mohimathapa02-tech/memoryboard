@@ -298,7 +298,7 @@ function App() {
 
   useEffect(() => {
     const container = document.createElement('div')
-    container.style.cssText = 'position:fixed;left:0;top:0;width:300px;height:80px;opacity:0;pointer-events:none;z-index:-1;overflow:hidden;'
+    container.style.cssText = 'position:fixed;left:0;top:0;width:300px;height:80px;opacity:0;pointer-events:none;z-index:-1;overflow:hidden;display:none;'
     document.body.appendChild(container)
     spotifyContainerRef.current = container
 
