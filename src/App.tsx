@@ -424,10 +424,51 @@ function App() {
     if (isSharing) return
     setIsSharing(true)
 
+    showTempToast('Generating link…')
+
+    // Compress local photos before sharing
+    const compressItem = (item: BoardItem): Promise<BoardItem> => {
+      if (item.type !== 'photo') return Promise.resolve(item)
+      if (!item.src.startsWith('data:')) return Promise.resolve(item)
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => {
+          try {
+            const MAX = 380
+            const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+            const canvas = document.createElement('canvas')
+            canvas.width = Math.round(img.width * scale)
+            canvas.height = Math.round(img.height * scale)
+            canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+            resolve({ ...item, src: canvas.toDataURL('image/jpeg', 0.35) })
+          } catch {
+            resolve(item)
+          }
+        }
+        img.onerror = () => resolve(item)
+        img.src = item.src
+      })
+    }
+
     try {
-      // Use the existing board ID — already saved in Supabase, no upload needed
-      const myBoardId = getOrCreateBoardId()
-      const shareUrl = `${window.location.origin}${window.location.pathname}?board=${myBoardId}`
+      const compressedItems = await Promise.all(
+        items
+          .filter(item => !(item.type === 'sticker' && (item as StickerItem).src.startsWith('blob:')))
+          .map(compressItem)
+      )
+
+      // Save snapshot to Supabase with a new share UUID
+      const shareId = crypto.randomUUID()
+      const saved = await saveBoard(shareId, compressedItems)
+
+      let shareUrl: string
+      if (saved) {
+        shareUrl = `${window.location.origin}${window.location.pathname}?board=${shareId}`
+      } else {
+        // Fallback: encode into URL hash
+        const compressed = compressToEncodedURIComponent(JSON.stringify({ items: compressedItems }))
+        shareUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
+      }
 
       try {
         await navigator.clipboard.writeText(shareUrl)
