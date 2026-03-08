@@ -1667,18 +1667,39 @@ function App() {
 
       {shareUrl && (
         <div className="save-modal-overlay" onClick={() => setShareUrl(null)}>
-          <div className="save-modal" onClick={e => e.stopPropagation()}>
-            <button className="save-modal-close" onClick={() => setShareUrl(null)}>✕</button>
-            <div className="save-modal-emoji">🎉</div>
-            <h2 className="save-modal-title">Your board is saved!</h2>
-            <p className="save-modal-desc">Share it with friends using the link below.</p>
-            <div className="save-modal-url-row">
-              <span className="save-modal-url">{shareUrl}</span>
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#fff',
+              borderRadius: 20,
+              padding: '18px 20px',
+              boxShadow: '0 12px 40px rgba(0,0,0,0.16), 0 0 0 1px rgba(0,0,0,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              width: 320,
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: 'var(--font-note)', fontWeight: 700, fontSize: 15 }}>Board saved! 🎉</span>
+              <button onClick={() => setShareUrl(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#999', lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+            <p style={{ fontFamily: 'var(--font-note)', fontSize: 11, color: '#999', margin: 0, fontStyle: 'italic' }}>
+              Share it with friends using the link below.
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', background: '#f4f4f4', borderRadius: 10, padding: '8px 12px', gap: 8 }}>
+              <span style={{ flex: 1, fontSize: 12, fontFamily: 'var(--font-note)', color: '#444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {shareUrl}
+              </span>
               <button
-                className="save-modal-copy"
                 onClick={() => {
                   navigator.clipboard.writeText(shareUrl).catch(() => {})
                   showTempToast('Link copied!')
+                }}
+                style={{
+                  background: '#1a1a1a', color: '#fff', border: 'none', borderRadius: 8,
+                  padding: '6px 12px', fontSize: 12, fontFamily: 'var(--font-note)',
+                  fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
                 }}
               >
                 Copy
