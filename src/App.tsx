@@ -316,14 +316,36 @@ function App() {
     }).catch(() => { boardLoaded.current = true })
   }, [])
 
-  // Auto-save board to Supabase (debounced 1.5s, only after initial load)
+  // Auto-save board to Supabase (debounced 10s, only after initial load)
   useEffect(() => {
     if (isReadonly) return
     if (!boardLoaded.current) return
-    const timer = setTimeout(() => {
+    const timer = setTimeout(async () => {
       const myBoardId = getOrCreateBoardId()
-      saveBoard(myBoardId, items).catch(() => {})
-    }, 1500)
+      // Compress images before saving to reduce bandwidth usage
+      const compressItem = async (item: BoardItem): Promise<BoardItem> => {
+        if (item.type !== 'photo') return item
+        if (!item.src.startsWith('data:')) return item
+        return new Promise((resolve) => {
+          const img = new Image()
+          img.onload = () => {
+            try {
+              const MAX = 800
+              const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+              const canvas = document.createElement('canvas')
+              canvas.width = Math.round(img.width * scale)
+              canvas.height = Math.round(img.height * scale)
+              canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+              resolve({ ...item, src: canvas.toDataURL('image/jpeg', 0.6) })
+            } catch { resolve(item) }
+          }
+          img.onerror = () => resolve(item)
+          img.src = item.src
+        })
+      }
+      const compressedItems = await Promise.all(items.map(compressItem))
+      saveBoard(myBoardId, compressedItems).catch(() => {})
+    }, 10000)
     return () => clearTimeout(timer)
   }, [items, isReadonly])
 
