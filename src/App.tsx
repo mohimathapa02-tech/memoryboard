@@ -316,36 +316,54 @@ function App() {
     }).catch(() => { boardLoaded.current = true })
   }, [])
 
-  // Auto-save board to Supabase (debounced 10s, only after initial load)
+  const itemsRef = useRef(items)
+  useEffect(() => { itemsRef.current = items }, [items])
+
+  const persistBoard = async (boardItems: BoardItem[]) => {
+    if (!boardLoaded.current) return
+    const compressItem = (item: BoardItem): Promise<BoardItem> => {
+      if (item.type !== 'photo') return Promise.resolve(item)
+      if (!item.src.startsWith('data:')) return Promise.resolve(item)
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => {
+          try {
+            const MAX = 800
+            const scale = Math.min(1, MAX / Math.max(img.width, img.height))
+            const canvas = document.createElement('canvas')
+            canvas.width = Math.round(img.width * scale)
+            canvas.height = Math.round(img.height * scale)
+            canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
+            resolve({ ...item, src: canvas.toDataURL('image/jpeg', 0.6) })
+          } catch { resolve(item) }
+        }
+        img.onerror = () => resolve(item)
+        img.src = item.src
+      })
+    }
+    const compressed = await Promise.all(boardItems.map(compressItem))
+    saveBoard(getOrCreateBoardId(), compressed).catch(() => {})
+  }
+
+  // Save when user switches tab or minimizes window
+  useEffect(() => {
+    if (isReadonly) return
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        persistBoard(itemsRef.current)
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [isReadonly])
+
+  // Fallback: debounced save every 30s
   useEffect(() => {
     if (isReadonly) return
     if (!boardLoaded.current) return
-    const timer = setTimeout(async () => {
-      const myBoardId = getOrCreateBoardId()
-      // Compress images before saving to reduce bandwidth usage
-      const compressItem = async (item: BoardItem): Promise<BoardItem> => {
-        if (item.type !== 'photo') return item
-        if (!item.src.startsWith('data:')) return item
-        return new Promise((resolve) => {
-          const img = new Image()
-          img.onload = () => {
-            try {
-              const MAX = 800
-              const scale = Math.min(1, MAX / Math.max(img.width, img.height))
-              const canvas = document.createElement('canvas')
-              canvas.width = Math.round(img.width * scale)
-              canvas.height = Math.round(img.height * scale)
-              canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
-              resolve({ ...item, src: canvas.toDataURL('image/jpeg', 0.6) })
-            } catch { resolve(item) }
-          }
-          img.onerror = () => resolve(item)
-          img.src = item.src
-        })
-      }
-      const compressedItems = await Promise.all(items.map(compressItem))
-      saveBoard(myBoardId, compressedItems).catch(() => {})
-    }, 10000)
+    const timer = setTimeout(() => {
+      persistBoard(itemsRef.current)
+    }, 30000)
     return () => clearTimeout(timer)
   }, [items, isReadonly])
 
