@@ -988,13 +988,9 @@ function App() {
                   size={{ width: item.width, height: item.height }}
                   position={{ x: item.x, y: item.y }}
                   lockAspectRatio={item.type === 'sticker'}
-                  enableResizing={isReadonly ? false : item.type === 'sticker' ? {
-                    top: false, right: false, bottom: true, left: false,
-                    topLeft: false, topRight: false,
-                    bottomLeft: true, bottomRight: true,
-                  } : {
-                    top: false, right: false, bottom: true, left: false,
-                    topLeft: false, topRight: false,
+                  enableResizing={isReadonly ? false : {
+                    top: true, right: true, bottom: true, left: true,
+                    topLeft: true, topRight: true,
                     bottomLeft: true, bottomRight: true,
                   }}
                   disableDragging={isReadonly || (item.type === 'note' && editingNoteId === item.id)}
