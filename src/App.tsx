@@ -224,6 +224,7 @@ function App() {
   const [showGifModal, setShowGifModal] = useState(false)
   const [showStickerModal, setShowStickerModal] = useState(false)
   const [showIllustrationsModal, setShowIllustrationsModal] = useState(false)
+  const [isSharing, setIsSharing] = useState(false)
   const [showCountdownModal, setShowCountdownModal] = useState(false)
   const [showLocationPicker, setShowLocationPicker] = useState(false)
   const [locationQuery, setLocationQuery] = useState('')
@@ -415,6 +416,8 @@ function App() {
       showTempToast('Add a few memories first.')
       return
     }
+    if (isSharing) return
+    setIsSharing(true)
     showTempToast('Generating link…')
 
     // Compress local photos before sharing (skip CDN URLs like Giphy)
@@ -474,6 +477,8 @@ function App() {
     } catch (err) {
       console.error('Share failed:', err)
       showTempToast('Could not generate link. Try again.')
+    } finally {
+      setIsSharing(false)
     }
   }
 
@@ -969,15 +974,22 @@ function App() {
           {!isReadonly && (
             <button
               type="button"
-              className="app-share-button icon-only"
+              className={`app-share-button icon-only${isSharing ? ' sharing' : ''}`}
               onClick={handleShare}
               aria-label="Share board"
+              disabled={isSharing}
             >
-              <img
-                className="app-share-icon"
-                src="https://api.iconify.design/material-symbols:share.svg?color=white"
-                alt=""
-              />
+              {isSharing ? (
+                <svg className="share-spinner" viewBox="0 0 24 24" width="18" height="18" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="40" strokeDashoffset="20" />
+                </svg>
+              ) : (
+                <img
+                  className="app-share-icon"
+                  src="https://api.iconify.design/material-symbols:share.svg?color=white"
+                  alt=""
+                />
+              )}
             </button>
           )}
           <button

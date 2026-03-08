@@ -100,6 +100,21 @@
   justify-content: center;
 }
 
+.app-share-button.sharing {
+  opacity: 0.75;
+  cursor: not-allowed;
+}
+
+.share-spinner {
+  color: white;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 .app-main {
   flex: 1;
   min-height: 0;
