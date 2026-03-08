@@ -2,7 +2,17 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Rnd } from 'react-rnd'
 import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string'
+import { loadBoard, saveBoard } from './supabase'
 import './App.css'
+
+function getOrCreateBoardId(): string {
+  let id = localStorage.getItem('memoryboard-id')
+  if (!id) {
+    id = crypto.randomUUID()
+    localStorage.setItem('memoryboard-id', id)
+  }
+  return id
+}
 
 type BoardItemBase = {
   id: string
@@ -267,18 +277,15 @@ function App() {
   const selectedTextItem = selectedItem && selectedItem.type === 'text' ? selectedItem : null
 
   useEffect(() => {
-    // New: ?board=<hastebin-key> shared links
-    const boardId = new URLSearchParams(window.location.search).get('board')
-    if (boardId) {
-      fetch(`https://hastebin.com/raw/${boardId}`)
-        .then((r) => r.json())
-        .then((parsed: SerializedBoard) => {
-          if (Array.isArray(parsed.items)) {
-            setItems(parsed.items)
-            setIsReadonly(true)
-          }
-        })
-        .catch(() => {})
+    const sharedBoardId = new URLSearchParams(window.location.search).get('board')
+    if (sharedBoardId) {
+      // Load a shared board (readonly)
+      loadBoard(sharedBoardId).then((parsed) => {
+        if (parsed && Array.isArray(parsed.items)) {
+          setItems(parsed.items as BoardItem[])
+          setIsReadonly(true)
+        }
+      }).catch(() => {})
       return
     }
     // Legacy: #hash shared links
@@ -293,8 +300,26 @@ function App() {
           setIsReadonly(true)
         }
       } catch { /* ignore */ }
+      return
     }
+    // Load own board from Supabase
+    const myBoardId = getOrCreateBoardId()
+    loadBoard(myBoardId).then((parsed) => {
+      if (parsed && Array.isArray(parsed.items)) {
+        setItems(parsed.items as BoardItem[])
+      }
+    }).catch(() => {})
   }, [])
+
+  // Auto-save board to Supabase (debounced 1.5s)
+  useEffect(() => {
+    if (isReadonly) return
+    const timer = setTimeout(() => {
+      const myBoardId = getOrCreateBoardId()
+      saveBoard(myBoardId, items).catch(() => {})
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [items, isReadonly])
 
   useEffect(() => {
     const container = document.createElement('div')
@@ -422,23 +447,17 @@ function App() {
           .filter(item => !(item.type === 'sticker' && (item as StickerItem).src.startsWith('blob:')))
           .map(compressItem)
       )
-      const payload = JSON.stringify({ items: compressedItems })
+
+      // Save a snapshot to Supabase with a new share UUID
+      const shareId = crypto.randomUUID()
+      const saved = await saveBoard(shareId, compressedItems)
 
       let shareUrl: string
-
-      // Try hastebin; fall back to compressed hash URL if it fails
-      try {
-        const res = await fetch('https://hastebin.com/documents', {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: payload,
-        })
-        if (!res.ok) throw new Error(`hastebin ${res.status}`)
-        const { key: pasteId } = await res.json()
-        shareUrl = `${window.location.origin}${window.location.pathname}?board=${pasteId}`
-      } catch {
-        // Fallback: encode everything into the URL hash (works offline too)
-        const compressed = compressToEncodedURIComponent(payload)
+      if (saved) {
+        shareUrl = `${window.location.origin}${window.location.pathname}?board=${shareId}`
+      } else {
+        // Fallback: encode into URL hash
+        const compressed = compressToEncodedURIComponent(JSON.stringify({ items: compressedItems }))
         shareUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
       }
 
