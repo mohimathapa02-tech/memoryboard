@@ -472,6 +472,7 @@ function App() {
   }
 
   const handleNewBoard = () => {
+    localStorage.setItem('memoryboard-id', crypto.randomUUID())
     window.location.href = window.location.pathname
   }
 
