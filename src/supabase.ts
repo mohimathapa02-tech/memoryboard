@@ -19,5 +19,6 @@ export async function saveBoard(id: string, items: unknown[]) {
   const { error } = await supabase
     .from('boards')
     .upsert({ id, data: { items }, updated_at: new Date().toISOString() })
+  if (error) console.error('Supabase saveBoard error:', error)
   return !error
 }

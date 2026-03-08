@@ -450,7 +450,9 @@ function App() {
 
       // Save a snapshot to Supabase with a new share UUID
       const shareId = crypto.randomUUID()
+      console.log('Saving share board with id:', shareId)
       const saved = await saveBoard(shareId, compressedItems)
+      console.log('Save result:', saved)
 
       let shareUrl: string
       if (saved) {
@@ -461,10 +463,14 @@ function App() {
         shareUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
       }
 
-      await navigator.clipboard.writeText(shareUrl).catch(() => {
+      console.log('Share URL:', shareUrl)
+      try {
+        await navigator.clipboard.writeText(shareUrl)
+        showTempToast('Share link copied!')
+      } catch {
         window.prompt('Copy this link to share your board:', shareUrl)
-      })
-      showTempToast('Share link copied!')
+        showTempToast('Share link copied!')
+      }
     } catch (err) {
       console.error('Share failed:', err)
       showTempToast('Could not generate link. Try again.')
