@@ -1677,14 +1677,14 @@ function App() {
               display: 'flex',
               flexDirection: 'column',
               gap: 10,
-              width: 320,
+              width: 720,
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: 'var(--font-note)', fontWeight: 700, fontSize: 15 }}>Board saved! 🎉</span>
+              <span style={{ fontFamily: 'var(--font-note)', fontWeight: 700, fontSize: 19 }}>Board saved! 🎉</span>
               <button onClick={() => setShareUrl(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#999', lineHeight: 1, padding: 0 }}>×</button>
             </div>
-            <p style={{ fontFamily: 'var(--font-note)', fontSize: 11, color: '#999', margin: 0, fontStyle: 'italic' }}>
+            <p style={{ fontFamily: 'var(--font-note)', fontSize: 15, color: '#999', margin: 0, fontStyle: 'italic' }}>
               Share it with friends using the link below.
             </p>
             <div style={{ display: 'flex', alignItems: 'center', background: '#f4f4f4', borderRadius: 10, padding: '8px 12px', gap: 8 }}>
