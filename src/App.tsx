@@ -1677,7 +1677,7 @@ function App() {
               display: 'flex',
               flexDirection: 'column',
               gap: 10,
-              width: 720,
+              width: 400,
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
