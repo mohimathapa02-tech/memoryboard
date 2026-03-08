@@ -207,6 +207,7 @@ const randomRotation = () => (Math.random() - 0.5) * 10
 
 function App() {
   const [items, setItems] = useState<BoardItem[]>([])
+  const boardLoaded = useRef(false)
   const [_activeTool, setActiveTool] = useState<Tool>('note')
   const [isReadonly, setIsReadonly] = useState(false)
   const [showToast, setShowToast] = useState<string | null>(null)
@@ -286,7 +287,8 @@ function App() {
           setItems(parsed.items as BoardItem[])
           setIsReadonly(true)
         }
-      }).catch(() => {})
+        boardLoaded.current = true
+      }).catch(() => { boardLoaded.current = true })
       return
     }
     // Legacy: #hash shared links
@@ -301,6 +303,7 @@ function App() {
           setIsReadonly(true)
         }
       } catch { /* ignore */ }
+      boardLoaded.current = true
       return
     }
     // Load own board from Supabase
@@ -309,12 +312,14 @@ function App() {
       if (parsed && Array.isArray(parsed.items)) {
         setItems(parsed.items as BoardItem[])
       }
-    }).catch(() => {})
+      boardLoaded.current = true
+    }).catch(() => { boardLoaded.current = true })
   }, [])
 
-  // Auto-save board to Supabase (debounced 1.5s)
+  // Auto-save board to Supabase (debounced 1.5s, only after initial load)
   useEffect(() => {
     if (isReadonly) return
+    if (!boardLoaded.current) return
     const timer = setTimeout(() => {
       const myBoardId = getOrCreateBoardId()
       saveBoard(myBoardId, items).catch(() => {})
