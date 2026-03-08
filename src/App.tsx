@@ -465,9 +465,19 @@ function App() {
       if (saved) {
         shareUrl = `${window.location.origin}${window.location.pathname}?board=${shareId}`
       } else {
-        // Fallback: encode into URL hash
+        // Fallback: encode into URL hash, then shorten via TinyURL
         const compressed = compressToEncodedURIComponent(JSON.stringify({ items: compressedItems }))
-        shareUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
+        const longUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
+        try {
+          const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`)
+          if (res.ok) {
+            shareUrl = await res.text()
+          } else {
+            shareUrl = longUrl
+          }
+        } catch {
+          shareUrl = longUrl
+        }
       }
 
       try {
