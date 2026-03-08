@@ -446,17 +446,20 @@ function App() {
       const boardId = crypto.randomUUID()
       const saved = await saveBoard(boardId, compressedItems)
 
-      let url: string
+      let longUrl: string
       if (saved) {
-        url = `${window.location.origin}${window.location.pathname}?board=${boardId}`
+        longUrl = `${window.location.origin}${window.location.pathname}?board=${boardId}`
       } else {
         const compressed = compressToEncodedURIComponent(JSON.stringify({ items: compressedItems }))
-        const longUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
-        try {
-          const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`)
-          url = res.ok ? await res.text() : longUrl
-        } catch { url = longUrl }
+        longUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
       }
+
+      // Always shorten via TinyURL
+      let url = longUrl
+      try {
+        const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(longUrl)}`)
+        if (res.ok) url = (await res.text()).trim()
+      } catch { /* use longUrl as fallback */ }
 
       setShareUrl(url)
     } catch (err) {
