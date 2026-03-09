@@ -422,13 +422,13 @@ function App() {
         const img = new Image()
         img.onload = () => {
           try {
-            const MAX = 380
+            const MAX = 180
             const scale = Math.min(1, MAX / Math.max(img.width, img.height))
             const canvas = document.createElement('canvas')
             canvas.width = Math.round(img.width * scale)
             canvas.height = Math.round(img.height * scale)
             canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
-            resolve({ ...item, src: canvas.toDataURL('image/jpeg', 0.35) })
+            resolve({ ...item, src: canvas.toDataURL('image/jpeg', 0.25) })
           } catch { resolve(item) }
         }
         img.onerror = () => resolve(item)
@@ -446,13 +446,12 @@ function App() {
       const boardId = crypto.randomUUID()
       const saved = await saveBoard(boardId, compressedItems)
 
-      let longUrl: string
-      if (saved) {
-        longUrl = `${window.location.origin}${window.location.pathname}?board=${boardId}`
-      } else {
-        const compressed = compressToEncodedURIComponent(JSON.stringify({ items: compressedItems }))
-        longUrl = `${window.location.origin}${window.location.pathname}#${compressed}`
+      if (!saved) {
+        showTempToast('Save failed. Please try again in a moment.')
+        return
       }
+
+      const longUrl = `${window.location.origin}${window.location.pathname}?board=${boardId}`
 
       // Always shorten via is.gd (supports CORS)
       let url = longUrl
