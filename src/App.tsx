@@ -420,36 +420,13 @@ function App() {
     if (isSaving) return
     setIsSaving(true)
 
-    const compressItem = (item: BoardItem): Promise<BoardItem> => {
-      if (item.type !== 'photo') return Promise.resolve(item)
-      if (!item.src.startsWith('data:')) return Promise.resolve(item)
-      return new Promise((resolve) => {
-        const img = new Image()
-        img.onload = () => {
-          try {
-            const MAX = 180
-            const scale = Math.min(1, MAX / Math.max(img.width, img.height))
-            const canvas = document.createElement('canvas')
-            canvas.width = Math.round(img.width * scale)
-            canvas.height = Math.round(img.height * scale)
-            canvas.getContext('2d')!.drawImage(img, 0, 0, canvas.width, canvas.height)
-            resolve({ ...item, src: canvas.toDataURL('image/jpeg', 0.25) })
-          } catch { resolve(item) }
-        }
-        img.onerror = () => resolve(item)
-        img.src = item.src
-      })
-    }
-
     try {
-      const compressedItems = await Promise.all(
-        items
-          .filter(item => !(item.type === 'sticker' && (item as StickerItem).src.startsWith('blob:')))
-          .map(compressItem)
+      const saveItems = items.filter(
+        item => !(item.type === 'sticker' && (item as StickerItem).src.startsWith('blob:'))
       )
 
       const boardId = crypto.randomUUID()
-      const saved = await saveBoard(boardId, compressedItems)
+      const saved = await saveBoard(boardId, saveItems)
 
       if (!saved) {
         showTempToast('Save failed. Please try again in a moment.')
@@ -525,12 +502,20 @@ function App() {
     setActiveTool('text')
   }
 
-  const handlePhotoUpload = (file: File | null) => {
+  const handlePhotoUpload = async (file: File | null) => {
     if (!file || isReadonly) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const src = typeof reader.result === 'string' ? reader.result : ''
-      if (!src) return
+    showTempToast('Uploading photo…')
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('upload_preset', 'memoryboard')
+      const res = await fetch('https://api.cloudinary.com/v1_1/dl0ipmlud/image/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      if (!res.ok) throw new Error('Upload failed')
+      const data = await res.json() as { secure_url: string }
+      const src = data.secure_url
       const centerX = 220 + Math.random() * 120
       const centerY = 180 + Math.random() * 120
       const item: PhotoItem = {
@@ -546,8 +531,9 @@ function App() {
         createdAt: Date.now(),
       }
       setItems((prev) => [...prev, item])
+    } catch {
+      showTempToast('Photo upload failed. Try again.')
     }
-    reader.readAsDataURL(file)
   }
 
   const handleCreativeOption = (id: string) => {
