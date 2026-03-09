@@ -287,9 +287,14 @@ function App() {
         if (parsed && Array.isArray(parsed.items)) {
           setItems(parsed.items as BoardItem[])
           setIsReadonly(true)
+        } else {
+          showTempToast('Could not load board. The link may have expired.')
         }
         boardLoaded.current = true
-      }).catch(() => { boardLoaded.current = true })
+      }).catch(() => {
+        showTempToast('Could not load board. Please try again later.')
+        boardLoaded.current = true
+      })
       return
     }
     // Legacy: #hash shared links
